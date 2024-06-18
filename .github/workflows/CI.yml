@@ -23,7 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.9'
           - 'nightly'
         os:
           - ubuntu-latest
@@ -59,10 +58,17 @@ jobs:
       statuses: write
     steps:
       - uses: actions/checkout@v4
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.ENV_KEY }}
       - uses: julia-actions/setup-julia@v2
         with:
-          version: '1'
+          version: 'nightly'
       - uses: julia-actions/cache@v2
+      - run: julia --color=yes --project -e 'using Pkg;
+               Pkg.Registry.add(Pkg.RegistrySpec(url = "git@github.com:serenity4/Graphics"));
+               Pkg.Registry.add(Pkg.RegistrySpec(url = "git@github.com:JuliaRegistries/General"));
+               Pkg.instantiate()'
       - name: Configure doc environment
         shell: julia --project=docs --color=yes {0}
         run: |
