@@ -12,6 +12,9 @@ struct LittleEndian{T} end
 Base.read(io::IO, ::Type{LittleEndian{T}}) where {T} = read_little_endian(io, T)
 read_little_endian(io::IO, ::Type{T}) where {T} = ltoh(reinterpret(T, ntuple(i -> read(io, UInt8), sizeof(T))))
 
+struct NullTerminatedString end
+Base.read(io::IO, ::Type{NullTerminatedString}) = read_null_terminated_string(io)
+
 @enum PixelType::UInt32 begin
   PIXEL_TYPE_UINT32 = 0
   PIXEL_TYPE_FLOAT16 = 1
@@ -35,7 +38,7 @@ end
   COMPRESSION_ZIPS = 2
   COMPRESSION_ZIP = 3
   COMPRESSION_PIZ = 4
-  COMPRESSION_PRX24 = 5
+  COMPRESSION_PXR24 = 5
   COMPRESSION_B44 = 6
   COMPRESSION_B44A = 7
 end

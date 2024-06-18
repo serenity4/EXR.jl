@@ -15,7 +15,7 @@ end
 
 Base.IteratorEltype(::Type{ChannelIterator{IO}}) where {IO} = Base.HasEltype()
 Base.eltype(::Type{ChannelIterator{IO}}) where {IO} = Channel
-Base.IteratorSize(::Type{ChannelIterator{IO}}) where {IO} = Base.HasLength()
+Base.IteratorSize(::Type{ChannelIterator{IO}}) where {IO} = Base.SizeUnknown()
 Base.length(iterator::ChannelIterator) = count(_ -> true, iterator)
 
 function Base.iterate(iterator::ChannelIterator, offset::Int64 = iterator.offset)

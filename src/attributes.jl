@@ -9,8 +9,8 @@
   end
 end
 
-payload(attribute::Attribute, ::Type{T}, io::IO) where {T} = read_at(io, T, attribute.offset)
-payload(attribute::Attribute, ::Type{NTuple{N,T}}, io::IO) where {N,T} = ntuple(i -> read_at(io, T, attribute.offset + (i - 1) * sizeof(T)), N)
+payload(attribute::Attribute, ::Type{T}, io::IO) where {T} = read_at(io, T, attribute.offset; start = 0)
+payload(attribute::Attribute, ::Type{NTuple{N,T}}, io::IO) where {N,T} = ntuple(i -> read_at(io, T, attribute.offset + (i - 1) * sizeof(T); start = 0), N)
 
 function Base.getindex(attributes::Vector{Attribute}, name::Symbol)
   i = findfirst(x -> x.name == name, attributes)
@@ -25,8 +25,8 @@ struct AttributeIterator{IO}
 end
 
 Base.IteratorEltype(::Type{AttributeIterator{IO}}) where {IO} = Base.HasEltype()
-eltype(::Type{AttributeIterator{IO}}) where {IO} = Attribute
-Base.IteratorSize(::Type{AttributeIterator{IO}}) where {IO} = Base.HasLength()
+Base.eltype(::Type{AttributeIterator{IO}}) where {IO} = Attribute
+Base.IteratorSize(::Type{AttributeIterator{IO}}) where {IO} = Base.SizeUnknown()
 Base.length(iterator::AttributeIterator) = count(_ -> true, iterator)
 
 function Base.iterate(iterator::AttributeIterator, offset::Int64 = iterator.offset)

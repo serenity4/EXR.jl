@@ -10,6 +10,27 @@ end
 
 BinaryParsingTools.cache_stream_in_ram(::IO, ::Type{EXRStream}) = false
 
+function EXRPart(io::IO)
+  part = EXRPart{typeof(io)}(io)
+  part.type = EXR_PART_SCANLINE_IMAGE
+  part.attributes = AttributeIterator(io)
+  part.chunk_count = 0
+  for attribute in part.attributes
+    attribute.name == :name && (part.name = Symbol(payload(attribute, NullTerminatedString, io)))
+    attribute.name == :type && (part.type = payload(attribute, EXRPartType, io))
+    attribute.name == :displayWindow && (part.display_window = payload(attribute, Box2I, io))
+    attribute.name == :dataWindow && (part.display_window = payload(attribute, Box2I, io))
+    attribute.name == :pixelAspectRatio && (part.pixel_aspect_ratio = payload(attribute, Float32, io))
+    attribute.name == :screenWindowWidth && (part.screen_window_width = payload(attribute, LittleEndian{Float32}, io))
+    attribute.name == :screenWindowCenter && (part.screen_window_center = payload(attribute, NTuple{2, LittleEndian{Float32}}, io))
+    attribute.name == :compression && (part.compression = payload(attribute, Compression, io))
+    attribute.name == :lineOrder && (part.line_order = payload(attribute, LineOrder, io))
+    attribute.name == :chunkCount && (part.chunk_count = payload(attribute, Int32, io))
+    attribute.name == :channels && (part.channels = ChannelIterator(io, attribute.offset))
+  end
+  part
+end
+
 function Base.read(io::BinaryIO, ::Type{EXRStream})
   exr = EXRStream{typeof(io)}(io)
   exr.io = io
@@ -18,13 +39,6 @@ function Base.read(io::BinaryIO, ::Type{EXRStream})
   exr.version ≤ 2 || error("Required EXR version ≤ 2")
   exr.flags = EXRFlags(bytes >> 8)
   !in(EXR_MULTIPLE_PARTS, exr.flags) || error("Only single-part EXR files are supported")
-  exr.attributes = AttributeIterator(io)
-  for attribute in exr.attributes
-    attribute.name == :channels && (exr.channels = ChannelIterator(io, attribute.offset))
-    attribute.name == :pixelAspectRatio && (exr.pixel_aspect_ratio = payload(attribute, Float32, io))
-    attribute.name == :compression && payload(attribute, Compression, io)
-    attribute.name == :screenWindowWidth && (exr.screen_window_width = payload(attribute, LittleEndian{Float32}, io))
-    attribute.name == :screenWindowCenter && (exr.screen_window_center = payload(attribute, NTuple{2, LittleEndian{Float32}}, io))
-  end
+  exr.parts = EXRPart(io)
   exr
 end
