@@ -35,7 +35,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v2
       - run: julia --color=yes --project -e 'using Pkg;
                Pkg.Registry.add(Pkg.RegistrySpec(url = "git@github.com:serenity4/Graphics"));
                Pkg.Registry.add(Pkg.RegistrySpec(url = "git@github.com:JuliaRegistries/General"));
@@ -59,7 +59,7 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v2
       - name: Configure doc environment
         shell: julia --project=docs --color=yes {0}
         run: |
