@@ -8,7 +8,7 @@ function BinaryParsingTools.swap_endianness(io::IO, ::Type{EXRStream})
   error("The provided file is not an EXR file (magic_number: $(repr(magic_number)))")
 end
 
-BinaryParsingTools.cache_stream_in_ram(::IO, ::Type{EXRStream}) = false
+BinaryParsingTools.cache_stream_in_ram(::IO, ::Type{EXRStream}) = true
 
 function EXRPart(io::IO)
   part = EXRPart{typeof(io)}(io)

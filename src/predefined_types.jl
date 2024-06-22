@@ -12,7 +12,7 @@ dimensions(box::Box2) = (; width = 1 + box.xmax - box.xmin, height = 1 + box.yma
 # Define little-endian reader (for floats).
 struct LittleEndian{T} end
 Base.read(io::IO, ::Type{LittleEndian{T}}) where {T} = read_little_endian(io, T)
-read_little_endian(io::IO, ::Type{T}) where {T} = ltoh(reinterpret(T, ntuple(i -> read(io, UInt8), sizeof(T))))
+read_little_endian(io::IO, ::Type{T}) where {T} = ltoh(read(io, T))
 
 struct NullTerminatedString end
 Base.read(io::IO, ::Type{NullTerminatedString}) = read_null_terminated_string(io)

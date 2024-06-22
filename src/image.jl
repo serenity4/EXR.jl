@@ -20,20 +20,24 @@ function retrieve_offset_table!(exr::EXRStream, part::EXRPart)
   part.offsets = [read(exr.io, UInt64) for _ in 1:number_of_chunks(part)]
 end
 
-function read_scanline_uncompressed!(data::Matrix{T}, io::IO, part::EXRPart, j, channels, channel_offsets, channel_size) where {T}
+function read_scanline_uncompressed!(data::Matrix{T}, channel_data, io::IO, part::EXRPart, j, channels, channel_offsets, channel_size) where {T}
   (; width) = dimensions(part.data_window)
   n = length(channel_offsets)
   CT = component_type(T)
   CT === Any && error("Inferred component type for `$T` is `Any`; you will need to extend `component_type(::Type{$T})` to return the appropriate component type")
   origin = position(io)
-  for i in 1:width
-    components = ntuple(n) do c
-      channel = channels[c]
-      offset = channel_offsets[c]
+
+  # Gather every channel.
+  for (channel, chdata, offset) in zip(channels, channel_data, channel_offsets)
+    for i in 1:width
       seek(io, origin + offset * width + (i - 1) * channel_size)
-      read_component(io, CT, channel)
+      chdata[i] = read_component(io, CT, channel)
     end
-    data[i, j] = construct(T, components)
+  end
+
+  # Aggregate channels into the desired type.
+  for i in 1:width
+    data[i, j] = construct(T, ntuple(ni -> channel_data[ni][i], ncomponents(T)))
   end
   data
 end
@@ -41,6 +45,8 @@ end
 component_type(::Type{T}) where {T} = eltype(T)
 construct(::Type{T}, components) where {T} = T(components...)
 construct(::Type{T}, components) where {T<:Tuple} = convert(T, components)
+ncomponents(::Type{T}) where {T} = length(T)
+ncomponents(::Type{T}) where {N,T<:NTuple{N}} = N
 
 function read_component(io::IO, ::Type{CT}, channel::Channel) where {CT}
   channel.pixel_type === PIXEL_TYPE_FLOAT16 && return convert(CT, read(io, LittleEndian{Float16}))
@@ -50,11 +56,12 @@ function read_component(io::IO, ::Type{CT}, channel::Channel) where {CT}
 end
 
 function retrieve_image_from_scanline(::Type{T}, exr::EXRStream, part::EXRPart, channels) where {T}
-  n = scanlines_per_chunk(part.compression)
   channel_mask = [findfirst(y -> x === y.name, part.channels) for x in channels]
   channel_offsets = [(ind - 1) * channelsize(part.channels) for ind in channel_mask]
   channel_size = channelsize(part.channels)
+  CT = component_type(T)
   width, height = dimensions(part.data_window)
+  channel_data = ntuple(_ -> zeros(CT, width), length(channels))
   data = Matrix{T}(undef, width, height)
   for (j, offset) in enumerate(retrieve_offset_table!(exr, part))
     seek(exr.io, offset)
@@ -62,7 +69,7 @@ function retrieve_image_from_scanline(::Type{T}, exr::EXRStream, part::EXRPart, 
     y = read(exr.io, Int32)
     pixel_data_size = read(exr.io, Int32)
     if part.compression == COMPRESSION_NONE
-      read_scanline_uncompressed!(data, exr.io, part, j, part.channels[channel_mask], channel_offsets, channel_size)
+      read_scanline_uncompressed!(data, channel_data, exr.io, part, j, part.channels[channel_mask], channel_offsets, channel_size)
     else
       error("Compressed data is not yet supported for reading")
     end
