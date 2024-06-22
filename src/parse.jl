@@ -19,14 +19,14 @@ function EXRPart(io::IO)
     attribute.name == :name && (part.name = Symbol(payload(attribute, NullTerminatedString, io)))
     attribute.name == :type && (part.type = payload(attribute, EXRPartType, io))
     attribute.name == :displayWindow && (part.display_window = payload(attribute, Box2I, io))
-    attribute.name == :dataWindow && (part.display_window = payload(attribute, Box2I, io))
+    attribute.name == :dataWindow && (part.data_window = payload(attribute, Box2I, io))
     attribute.name == :pixelAspectRatio && (part.pixel_aspect_ratio = payload(attribute, Float32, io))
     attribute.name == :screenWindowWidth && (part.screen_window_width = payload(attribute, LittleEndian{Float32}, io))
     attribute.name == :screenWindowCenter && (part.screen_window_center = payload(attribute, NTuple{2, LittleEndian{Float32}}, io))
     attribute.name == :compression && (part.compression = payload(attribute, Compression, io))
     attribute.name == :lineOrder && (part.line_order = payload(attribute, LineOrder, io))
     attribute.name == :chunkCount && (part.chunk_count = payload(attribute, Int32, io))
-    attribute.name == :channels && (part.channels = ChannelIterator(io, attribute.offset))
+    attribute.name == :channels && (part.channels = collect(ChannelIterator(io, attribute.offset)))
   end
   part
 end
@@ -40,5 +40,6 @@ function Base.read(io::BinaryIO, ::Type{EXRStream})
   exr.flags = EXRFlags(bytes >> 8)
   !in(EXR_MULTIPLE_PARTS, exr.flags) || error("Only single-part EXR files are supported")
   exr.parts = EXRPart(io)
+  exr.offset_tables_origin = position(io)
   exr
 end

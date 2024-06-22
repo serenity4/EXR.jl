@@ -14,6 +14,7 @@ include("stream.jl")
 include("parse.jl")
 include("image.jl")
 
-export EXRStream
+export EXRStream,
+       retrieve_image
 
 end

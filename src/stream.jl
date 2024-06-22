@@ -92,8 +92,11 @@ mutable struct EXRPart{IO<:Base.IO}
   line_order::LineOrder
   chunk_count::Int32
   tiles::Optional{TileDescription}
-  channels::ChannelIterator{IO}
+  channels::Vector{Channel}
   attributes::AttributeIterator{IO}
+  offset_table_location::Int64
+  "Offsets from the beginning of the stream to each chunk data."
+  offsets::Vector{UInt64}
   function EXRPart{IO}(io::IO) where {IO}
     part = new{typeof(io)}(io)
     part.tiles = nothing
@@ -102,7 +105,7 @@ mutable struct EXRPart{IO<:Base.IO}
 end
 
 function scanlines_per_chunk(compression::Compression)
-  i = findfirst(x -> info.flag == compression, COMPRESSION_INFOS)
+  i = findfirst(x -> x.flag == compression, COMPRESSION_INFOS)
   isnothing(i) && error("No information exists for compression mode `$compression`")
   info = COMPRESSION_INFOS[i]
   info.scanlines
@@ -113,14 +116,13 @@ is_tiled(part::EXRPart) = !is_scanline(part)
 
 function number_of_chunks(part::EXRPart)
   part.chunk_count > 0 && return part.chunk_count
-  is_scanline(part) && return number_of_scanline_blocks(part)
-  number_of_tiles(part)
+  part.chunk_count = is_scanline(part) ? number_of_scanline_blocks(part) : number_of_tiles(part)
 end
 
 function number_of_scanline_blocks(part::EXRPart)
   scanlines = scanlines_per_chunk(part.compression)
-  rows = Int64(part.data_window.ymax) - Int64(part.data_window.ymin)
-  (rows + scanlines) ÷ scanlines
+  (; height) = dimensions(part.data_window)
+  height ÷ scanlines
 end
 
 function number_of_tiles(part::EXRPart)
@@ -135,6 +137,7 @@ mutable struct EXRStream{IO<:Base.IO}
   version::UInt32
   flags::EXRFlags
   parts::Union{EXRPart{IO}, Vector{EXRPart{IO}}}
+  offset_tables_origin::Int64
   EXRStream{IO}(io::IO) where {IO} = finalizer(exr -> close(exr.io), new{IO}(io))
 end
 

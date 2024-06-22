@@ -32,6 +32,6 @@ Base.length(iterator::AttributeIterator) = count(_ -> true, iterator)
 function Base.iterate(iterator::AttributeIterator, offset::Int64 = iterator.offset)
   seek(iterator.io, offset)
   eof(iterator.io) && return nothing
-  peek(iterator.io, UInt8) == 0x00 && return nothing
+  peek(iterator.io, UInt8) == 0x00 && return (skip(iterator.io, 1); nothing)
   read(iterator.io, Attribute), position(iterator.io)
 end

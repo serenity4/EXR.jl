@@ -7,6 +7,8 @@ end
 const Box2I = Box2{Int32}
 const Box2F = Box2{Float32}
 
+dimensions(box::Box2) = (; width = 1 + box.xmax - box.xmin, height = 1 + box.ymax - box.ymin)
+
 # Define little-endian reader (for floats).
 struct LittleEndian{T} end
 Base.read(io::IO, ::Type{LittleEndian{T}}) where {T} = read_little_endian(io, T)
@@ -19,6 +21,11 @@ Base.read(io::IO, ::Type{NullTerminatedString}) = read_null_terminated_string(io
   PIXEL_TYPE_UINT32 = 0
   PIXEL_TYPE_FLOAT16 = 1
   PIXEL_TYPE_FLOAT32 = 2
+end
+
+function pixelsize(type::PixelType)
+  type == PIXEL_TYPE_FLOAT16 && return 2
+  4
 end
 
 @serializable struct Chromaticities

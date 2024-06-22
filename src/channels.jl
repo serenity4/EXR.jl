@@ -7,6 +7,9 @@
   ysampling::Int32
 end
 
+channelsize(channel::Channel) = pixelsize(channel.pixel_type)
+channelsize(channels::Vector{Channel}) = channelsize(channels[1])
+
 struct ChannelIterator{IO}
   io::IO
   offset::Int64
