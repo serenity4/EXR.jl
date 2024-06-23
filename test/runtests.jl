@@ -11,4 +11,6 @@ exr = EXRStream(file)
   data = retrieve_image(NTuple{4, Float32}, exr)
   @test isa(data, Matrix{NTuple{4, Float32}})
   @test size(data) == (256, 256)
-end
+  @test all(color -> last(color) === 1f0, data)
+  @test all(color -> all(0f0 .≤ color[1:3] .≤ 1f0), data)
+end;

@@ -20,7 +20,7 @@ function retrieve_offset_table!(exr::EXRStream, part::EXRPart)
   part.offsets = [read(exr.io, UInt64) for _ in 1:number_of_chunks(part)]
 end
 
-function read_scanline_uncompressed!(data::Matrix{T}, channel_data, io::IO, part::EXRPart, j, channels, channel_offsets, channel_size) where {T}
+function read_scanline_uncompressed!(data::Matrix{T}, channel_data, io::IO, part::EXRPart, j, channels, channel_offsets, channel_sizes) where {T}
   (; width) = dimensions(part.data_window)
   n = length(channel_offsets)
   CT = component_type(T)
@@ -28,9 +28,9 @@ function read_scanline_uncompressed!(data::Matrix{T}, channel_data, io::IO, part
   origin = position(io)
 
   # Gather every channel.
-  for (channel, chdata, offset) in zip(channels, channel_data, channel_offsets)
+  for (channel, chdata, offset, size) in zip(channels, channel_data, channel_offsets, channel_sizes)
     for i in 1:width
-      seek(io, origin + offset * width + (i - 1) * channel_size)
+      seek(io, origin + offset * width + (i - 1) * size)
       chdata[i] = read_component(io, CT, channel)
     end
   end
@@ -57,8 +57,8 @@ end
 
 function retrieve_image_from_scanline(::Type{T}, exr::EXRStream, part::EXRPart, channels) where {T}
   channel_mask = [findfirst(y -> x === y.name, part.channels) for x in channels]
-  channel_offsets = [(ind - 1) * channelsize(part.channels) for ind in channel_mask]
-  channel_size = channelsize(part.channels)
+  channel_sizes = channelsize.(part.channels)
+  channel_offsets = [sum(@view channel_sizes[begin:(ind - 1)]) for ind in channel_mask]
   CT = component_type(T)
   width, height = dimensions(part.data_window)
   channel_data = ntuple(_ -> zeros(CT, width), length(channels))
@@ -69,7 +69,7 @@ function retrieve_image_from_scanline(::Type{T}, exr::EXRStream, part::EXRPart, 
     y = read(exr.io, Int32)
     pixel_data_size = read(exr.io, Int32)
     if part.compression == COMPRESSION_NONE
-      read_scanline_uncompressed!(data, channel_data, exr.io, part, j, part.channels[channel_mask], channel_offsets, channel_size)
+      read_scanline_uncompressed!(data, channel_data, exr.io, part, j, part.channels[channel_mask], channel_offsets, channel_sizes)
     else
       error("Compressed data is not yet supported for reading")
     end
