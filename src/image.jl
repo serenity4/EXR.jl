@@ -34,6 +34,11 @@ end
 
 abstract type Decompressor end
 
+function (decompressor::Decompressor)(exr::EXRStream, compressed_size, decompressed_size)
+  io = decompressor(exr.io, compressed_size, decompressed_size)
+  BinaryIO(exr.swap, io)
+end
+
 function (decompressor::Decompressor)(io, compressed_size, decompressed_size)
   error("Decompression not implemented for ", typeof(decompressor))
 end
@@ -118,7 +123,7 @@ function retrieve_image_from_scanline(::Type{T}, exr::EXRStream, part::EXRPart, 
     is_multi_part(exr) && (part_number = read(exr.io, UInt64))
     y = read(exr.io, Int32)
     scanline_data_size = read(exr.io, Int32)
-    read_scanline_uncompressed!(data, channel_data, decompressor(exr.io, scanline_data_size, row_data_size), part, i, channels, channel_offsets, channel_sizes)
+    read_scanline_uncompressed!(data, channel_data, decompressor(exr, scanline_data_size, row_data_size), part, i, channels, channel_offsets, channel_sizes)
   end
   data
 end

@@ -13,6 +13,9 @@ dimensions(box::Box2) = (; width = 1 + box.xmax - box.xmin, height = 1 + box.yma
 struct LittleEndian{T} end
 Base.read(io::IO, ::Type{LittleEndian{T}}) where {T} = read_little_endian(io, T)
 read_little_endian(io::IO, ::Type{T}) where {T} = ltoh(read(io, T))
+# Bypass the swapping performed by `BinaryIO`, values should always be in little-endian
+# for the types that we are concerned about, as per the OpenEXR docs.
+read_little_endian(io::BinaryIO, ::Type{T}) where {T} = read_little_endian(io.io, T)
 
 struct NullTerminatedString end
 Base.read(io::IO, ::Type{NullTerminatedString}) = read_null_terminated_string(io)

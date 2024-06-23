@@ -134,11 +134,12 @@ Base.show(io::IO, part::EXRPart) = print(io, EXRPart, "($(length(part.attributes
 
 mutable struct EXRStream{IO<:Base.IO}
   io::IO
+  swap::Bool
   version::UInt32
   flags::EXRFlags
   parts::Union{EXRPart{IO}, Vector{EXRPart{IO}}}
   offset_tables_origin::Int64
-  EXRStream{IO}(io::IO) where {IO} = finalizer(exr -> close(exr.io), new{IO}(io))
+  EXRStream{IO}(io::IO) where {IO<:BinaryIO} = finalizer(exr -> close(exr.io), new{IO}(io, io.swap))
 end
 
 function Base.show(io::IO, exr::EXRStream)

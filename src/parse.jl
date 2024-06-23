@@ -33,7 +33,6 @@ end
 
 function Base.read(io::BinaryIO, ::Type{EXRStream})
   exr = EXRStream{typeof(io)}(io)
-  exr.io = io
   bytes = read(io, UInt32)
   exr.version = UInt8(bytes & 0x000000ff)
   exr.version ≤ 2 || error("Required EXR version ≤ 2")
