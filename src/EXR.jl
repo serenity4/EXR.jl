@@ -13,6 +13,7 @@ include("attributes.jl")
 include("channels.jl")
 include("stream.jl")
 include("parse.jl")
+include("codec.jl")
 include("image.jl")
 
 export EXRStream,

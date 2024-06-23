@@ -1,5 +1,5 @@
 using EXR
-using EXR: interleave
+using EXR: interleave, reverse_delta_encoding!
 using Test
 
 asset_file(path) = joinpath(@__DIR__, "assets", path)
@@ -19,6 +19,9 @@ end
     bytes = [0x01, 0x02, 0x03, 0x04, 0x05]
     interleaved = interleave(bytes)
     @test interleaved == [0x01, 0x04, 0x02, 0x05, 0x03]
+    bytes = UInt8[61, 0x80 - 12, 0x80 + 7]
+    reverse_delta_encoding!(bytes)
+    @test bytes == UInt8[61, 49, 56]
   end
 
   @testset "Data retrieval" begin
