@@ -2,6 +2,7 @@ module EXR
 
 using BinaryParsingTools
 using BitMasks
+using LibDeflate: LibDeflate
 
 const Optional{T} = Union{Nothing, T}
 
