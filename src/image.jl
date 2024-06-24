@@ -7,7 +7,7 @@ function retrieve_image(::Type{T}, exr::EXRStream, part::EXRPart, channels) wher
   is_single_part(exr) || error("Only single-part EXR files are currently supported")
   check_channels(part.channels, channels)
   is_tiled(part) && return retrieve_image_from_tiles(part, channels)
-  retrieve_image_from_scanline(T, exr, part, channels)
+  retrieve_image_from_scanlines(T, exr, part, channels)
 end
 
 function check_channels(channels, names)
@@ -32,9 +32,9 @@ function retrieve_offset_table!(exr::EXRStream, part::EXRPart)
   part.offsets = [read(exr.io, UInt64) for _ in 1:number_of_chunks(part)]
 end
 
-function retrieve_image_from_scanline(::Type{T}, exr::EXRStream, part::EXRPart, channels) where {T}
+function retrieve_image_from_scanlines(::Type{T}, exr::EXRStream, part::EXRPart, channels) where {T}
   if part.compression == COMPRESSION_NONE
-    retrieve_image_from_scanline(T, exr, part, channels, NoDecompressor())
+    retrieve_image_from_scanlines(T, exr, part, channels, NoDecompressor())
   elseif part.compression == COMPRESSION_ZIP || part.compression == COMPRESSION_ZIPS
     aggregated_channel_size = sum(channels; init = 0) do channel
       i = findfirst(y -> channel === y.name, part.channels)::Int
@@ -42,13 +42,13 @@ function retrieve_image_from_scanline(::Type{T}, exr::EXRStream, part::EXRPart, 
     end
     (; width) = dimensions(part.data_window)
     buffer_size = aggregated_channel_size * width * scanlines_per_chunk(part.compression)
-    retrieve_image_from_scanline(T, exr, part, channels, ZipDecompressor(buffer_size))
+    retrieve_image_from_scanlines(T, exr, part, channels, ZipDecompressor(buffer_size))
   else
     error("Data compression mode `$(part.compression)` is not yet supported for reading")
   end
 end
 
-function retrieve_image_from_scanline(::Type{T}, exr::EXRStream, part::EXRPart, channel_selection, decompressor::Decompressor) where {T}
+function retrieve_image_from_scanlines(::Type{T}, exr::EXRStream, part::EXRPart, channel_selection, decompressor::Decompressor) where {T}
   channel_mask = [findfirst(y -> x === y.name, part.channels)::Int for x in channel_selection]
   channels = part.channels[channel_mask]
   channel_sizes = channelsize.(channels)
@@ -58,13 +58,23 @@ function retrieve_image_from_scanline(::Type{T}, exr::EXRStream, part::EXRPart, 
   width, height = dimensions(part.data_window)
   channel_data = ntuple(_ -> zeros(CT, width), length(channels))
   data = Matrix{T}(undef, height, width)
-  row_data_size = width * sum(channelsize, part.channels; init = 0)
-  for (i, offset) in enumerate(retrieve_offset_table!(exr, part))
+  n = scanlines_per_chunk(part.compression)
+  texel_size = sum(channelsize, part.channels; init = 0)
+  decompressed_block_size = width * texel_size * n
+  row_data_size = width * texel_size
+  for (block, offset) in enumerate(retrieve_offset_table!(exr, part))
     seek(exr.io, offset)
     is_multi_part(exr) && (part_number = read(exr.io, UInt64))
     y = read(exr.io, Int32)
-    scanline_data_size = read(exr.io, Int32)
-    read_scanline_uncompressed!(data, channel_data, decompressor(exr, scanline_data_size, row_data_size), part, i, channels, channel_offsets, channel_sizes)
+    compressed_block_size = read(exr.io, Int32)
+    io = decompressor(exr, compressed_block_size, decompressed_block_size)
+    for i in 1:n
+      origin = position(io)
+      scanline = i + (block - 1) * n
+      scanline > height && return data
+      read_scanline_uncompressed!(data, channel_data, io, part, scanline, channels, channel_offsets, channel_sizes)
+      skip(io, row_data_size - (position(io) - origin))
+    end
   end
   data
 end

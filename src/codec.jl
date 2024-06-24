@@ -25,6 +25,7 @@ function (zip::ZipDecompressor)(io::IO, compressed_size, decompressed_size)
   @assert length(zip.output) == decompressed_size
   ret = LibDeflate.zlib_decompress!(zip.codec, zip.output, @view(zip.input[1:compressed_size]), decompressed_size)
   isa(ret, LibDeflate.LibDeflateError) && error("An error occured while decompressing data: `$ret`")
+  @assert ret == decompressed_size
   reverse_delta_encoding!(zip.output)
   output = interleave(zip.output)
   IOBuffer(output)

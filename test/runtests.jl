@@ -34,7 +34,13 @@ end
     file = asset_file("render_zips.exr")
     exr = EXRStream(file)
     data2 = retrieve_image(NTuple{4, Float32}, exr)
-    test_is_image_valid(data)
+    test_is_image_valid(data2)
     @test data2 == data
+
+    file = asset_file("render_zip.exr")
+    exr = EXRStream(file)
+    data3 = retrieve_image(NTuple{4, Float32}, exr)
+    test_is_image_valid(data3)
+    @test data3 == data
   end
 end;
