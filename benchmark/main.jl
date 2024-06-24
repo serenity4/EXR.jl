@@ -4,6 +4,7 @@ using BenchmarkTools
 asset_file(path) = joinpath(dirname(@__DIR__), "test", "assets", path)
 
 file = asset_file("render_uncompressed.exr")
+exr = EXRStream(file)
 data = retrieve_image(NTuple{4, Float32}, exr)
 
 @profview for i in 1:1000; retrieve_image(NTuple{4, Float32}, exr); end
