@@ -30,7 +30,7 @@ jobs:
           - x64
     steps:
       - uses: actions/checkout@v4
-      - uses: webfactory/ssh-agent@v0.9.0
+      - uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.ENV_KEY }}
       - uses: julia-actions/setup-julia@v2
@@ -58,7 +58,7 @@ jobs:
       statuses: write
     steps:
       - uses: actions/checkout@v4
-      - uses: webfactory/ssh-agent@v0.9.0
+      - uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.ENV_KEY }}
       - uses: julia-actions/setup-julia@v2
